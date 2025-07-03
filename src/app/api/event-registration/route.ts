@@ -32,11 +32,10 @@ export async function GET(req: NextRequest) {
 
   // Get all event_ids for this user
   const regRes = await pool.query(
-    "SELECT event_id FROM registrations WHERE user_id = $1",
+    `SELECT e.* FROM registrations r JOIN events e ON r.event_id = e.event_id WHERE r.user_id = $1`,
     [user_id]
   );
-  const eventIds = regRes.rows.map((row) => row.event_id);
-  return NextResponse.json({ eventIds });
+  return NextResponse.json({ events: regRes.rows });
 }
 
 // POST: Register user for an event
@@ -57,14 +56,14 @@ export async function POST(req: NextRequest) {
   const user_id = userRes.rows[0].user_id;
 
   // Get event_id from frontend (by event_name or event_id)
-  const { event_id, events_id, event_name } = await req.json();
+  const { event_id, event_name } = await req.json();
 
   // Support both event_id and event_name (events_id)
   let actual_event_id = event_id;
-  if (!actual_event_id && (events_id || event_name)) {
+  if (!actual_event_id && (event_id || event_name)) {
     const res = await pool.query(
       "SELECT event_id FROM events WHERE event_name = $1",
-      [events_id || event_name]
+      [event_id || event_name]
     );
     actual_event_id = res.rows[0]?.event_id;
     if (!actual_event_id) {
